@@ -31,6 +31,7 @@ object TestTweeter extends App {
 
     bob ! Follow("alice")
     carol ! Follow("bob")
+    carol ! Follow("bob") // intentional (to "test" if tweets are not display 2 times)
 
     Thread.sleep(1000)
 
