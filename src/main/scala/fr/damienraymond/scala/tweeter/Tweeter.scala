@@ -23,7 +23,7 @@ class Tweeter(name: String, registry: ActorRef, viewRef: ActorRef)
   // Register actor to it
   viewRef ! RegisterTweeter(self)
 
-  var followers: List[ActorRef] = List.empty
+  var followers: Set[ActorRef] = Set.empty
 
   override def receive: Receive = {
     case Tweet(content) =>
@@ -42,7 +42,7 @@ class Tweeter(name: String, registry: ActorRef, viewRef: ActorRef)
 
     case AddFollower(user) =>
       log.info(s"$name => AddFollower($user)")
-      followers = user :: followers
+      followers += user
 
     case Retweet(retweeter, targetName, targetContent) =>
       // Ask to show his/her own rt
@@ -61,7 +61,7 @@ class Tweeter(name: String, registry: ActorRef, viewRef: ActorRef)
   def getUser(username: String): Future[Option[ActorRef]] = {
     log.debug(s"$name => Lookup($username)")
     (registry ? Lookup(username)) map {
-      case LookupAnswer(Some(ar)) =>
+      case LookupAnswer(Some(ar: ActorRef)) =>
         log.debug(s"$name => LookupAnswer(Some($ar))")
         Some(ar)
       case res =>
