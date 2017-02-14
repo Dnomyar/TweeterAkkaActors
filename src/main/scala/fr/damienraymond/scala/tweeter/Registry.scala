@@ -13,7 +13,7 @@ import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Inbox, Props}
 class Registry extends Actor with ActorLogging {
   import Registry._
 
-  private var registry: Map[String, ActorRef] = Map()
+  private var registry: Map[String, Any] = Map()
 
   def receive = {
     case Bind(name, value) => registry = registry + (name -> value)
@@ -25,12 +25,12 @@ class Registry extends Actor with ActorLogging {
 object Registry {
 
   // definition of specific messages received by the actor
-  case class Bind(name: String, value: ActorRef)
+  case class Bind(name: String, value: Any)
 
   case class Lookup(name: String)
 
   // definition of specific message sent by the actor
-  case class LookupAnswer(value: Option[ActorRef])
+  case class LookupAnswer(value: Option[Any])
 
   // create dedicated actor infrastructure
   val system = ActorSystem("myActorInfrastructure")
@@ -49,7 +49,7 @@ object TestRegistry extends App {
   // (via an internal actor of the inbox) 
   val i = Inbox.create(Registry.system)
   // test the registry
-  r ! Bind("Alice", null)
+  r ! Bind("Alice", "L")
   // r ! Lookup("Bob") would not properly instantiate "sender" on the registry 
   // side as the execution of the send action does not take place in the context
   // of an actor

@@ -2,18 +2,21 @@ package fr.damienraymond.scala.tweeter
 
 import javax.swing.{JButton, JFrame, JPanel, JTextArea}
 
+import akka.actor.ActorRef
+import fr.damienraymond.scala.tweeter.TweeterView.GuiRetweet
+
 
 /**
   * `Interface` of the GUI
   */
 trait ITweeterViewGUI {
 
-  def init(title: String): Unit
+  def createAndShowGUI(title: String): Unit
 
   def displayTweet(author: String, content: String, isFromMe: Boolean): Unit
   def displayRetweet(retweeter: String, targetName: String, targetContent: String, isFromMe: Boolean): Unit
 
-  def setTweeterView(view: TweeterView): Unit
+  def setTweeterView(view: ActorRef): Unit
 
 }
 
@@ -26,26 +29,22 @@ class TweeterViewGUI
   val tweetsTextArea = new JTextArea
   val rtButton = new JButton("RT !")
 
-  var tweeterViewActor: Option[TweeterView] = Option.empty
+  var tweeterViewActor: Option[ActorRef] = Option.empty
 
   rtButton.addActionListener { e =>
     println("TRACE : press button RT")
     tweeterViewActor match {
       case Some(v) =>
         println("TRACE : Launch rt")
-        v.retweet()
+        v ! GuiRetweet
       case None =>
         // Show error message
         println("TRACE : error tweeterViewActor is not bound")
     }
   }
 
-  override def init(title: String): Unit =
-    javax.swing.SwingUtilities.invokeLater(() => {
-      createAndShowGUI(title)
-    })
 
-  def createAndShowGUI(title: String): Unit = {
+  override def createAndShowGUI(title: String): Unit = {
     this.setTitle(title)
     this.setVisible(true)
     this.setSize(400, 100)
@@ -74,6 +73,6 @@ class TweeterViewGUI
 
 
 
-  override def setTweeterView(view: TweeterView): Unit =
+  override def setTweeterView(view: ActorRef): Unit =
     tweeterViewActor = Some(view)
 }

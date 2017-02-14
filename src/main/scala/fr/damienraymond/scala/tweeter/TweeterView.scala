@@ -2,26 +2,22 @@ package fr.damienraymond.scala.tweeter
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import fr.damienraymond.scala.tweeter.Tweeter.Retweet
-import fr.damienraymond.scala.tweeter.TweeterView.{RegisterTweeter, RetweetView, TweetView}
+import fr.damienraymond.scala.tweeter.TweeterView.{GuiRetweet, RegisterTweeter, RetweetView, TweetView}
 
 
 /**
   * Tweeter view interface
   */
-trait ITweeterView {
-  def retweet(): Unit
-}
-
 
 class TweeterView(name: String, view: ITweeterViewGUI)
   extends Actor
-    with ITweeterView
-    with ActorLogging  {
+    with ActorLogging
+    with ThreadSafeRun {
 
-  view.init(s"Tweeter $name")
+  safeRun(view.createAndShowGUI(s"Tweeter $name"))
 
   // Fix cyclic dependency by giving `this` to the view (GUI)
-  view.setTweeterView(this)
+  safeRun(view.setTweeterView(self))
 
   // Store last tweet to be able to handle rts
   var lastTweetOpt: Option[TweetView] = Option.empty
@@ -31,17 +27,20 @@ class TweeterView(name: String, view: ITweeterViewGUI)
   override def receive: Receive = {
     case tweet @ TweetView(author, content, isFromMe) =>
       lastTweetOpt = Some(tweet) // store lt
-      view.displayTweet(author, content, isFromMe)
+      safeRun(view.displayTweet(author, content, isFromMe))
 
     case RetweetView(retweeter, targetName, targetContent, isFromMe) =>
       //lastTweetOpt = Some(tweet) // ?
-      view.displayRetweet(retweeter, targetName, targetContent, isFromMe)
+      safeRun(view.displayRetweet(retweeter, targetName, targetContent, isFromMe))
 
     case RegisterTweeter(tweeterRef) =>
       tweeterOpt = Some(tweeterRef)
+
+    case GuiRetweet => retweet()
   }
 
-  override def retweet(): Unit = (lastTweetOpt, tweeterOpt) match {
+
+  def retweet(): Unit = (lastTweetOpt, tweeterOpt) match {
     case (Some(lt), Some(tweeter)) =>
       log.debug("Send retweet message to Tweeter")
       tweeter ! Retweet(name, lt.author, lt.content)
@@ -58,6 +57,7 @@ object TweeterView {
 
   case class RegisterTweeter(tweeter: ActorRef)
 
+  case object GuiRetweet
 
   def apply(name: String): ActorRef = {
     val view = new TweeterViewGUI
